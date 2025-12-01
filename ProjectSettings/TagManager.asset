@@ -8,6 +8,7 @@ TagManager:
   - Collectible
   - Esqueleto
   - Enemy
+  - EsqueletosQuietos
   layers:
   - Default
   - TransparentFX

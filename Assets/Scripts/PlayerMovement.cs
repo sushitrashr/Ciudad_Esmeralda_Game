@@ -3,7 +3,7 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Identificación")]
-    public string playerName = "Player 1"; // IMPORTANTE: "Player 1" o "Player 2"
+    public string playerName = "Player 1";
 
     [Header("Sistema de Vida")]
     public int maxHealth = 100;
@@ -26,15 +26,14 @@ public class PlayerMovement : MonoBehaviour
     [Header("Combate")]
     public Transform attackPoint;
     public float attackRange = 0.5f;
-    public LayerMask enemyLayers; // ¡Asegúrate de seleccionar la layer 'Enemy' aquí!
-    public int attackDamage = 20;
+    public LayerMask enemyLayers;
+    public int attackDamage = 40; // Aumentado el daño para que el combate sea más ágil
 
     [Header("Suelo")]
     public Transform groundCheck;
     public LayerMask groundLayer;
     public float groundCheckRadius = 0.2f;
 
-    // Componentes
     private Rigidbody2D rb;
     private Animator anim;
     private SpriteRenderer spriteRenderer;
@@ -52,13 +51,13 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (isDead) return; // Si está muerto, no hace nada
+        if (isDead) return;
 
-        // --- 1. SUELO ---
+        // --- SUELO ---
         if (groundCheck != null)
             isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
 
-        // --- 2. MOVIMIENTO ---
+        // --- MOVIMIENTO ---
         float moveInput = 0f;
         if (Input.GetKey(leftKey)) moveInput = -1f;
         if (Input.GetKey(rightKey)) moveInput = 1f;
@@ -66,9 +65,10 @@ public class PlayerMovement : MonoBehaviour
         bool isRunning = Input.GetKey(runKey);
         float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
+        // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
         rb.linearVelocity = new Vector2(moveInput * currentSpeed, rb.linearVelocity.y);
 
-        // --- 3. ANIMACIONES ---
+        // --- ANIMACIONES ---
         if (anim != null)
         {
             anim.SetFloat("Speed", Mathf.Abs(moveInput));
@@ -76,94 +76,110 @@ public class PlayerMovement : MonoBehaviour
             anim.SetBool("IsJumping", !isGrounded);
         }
 
-        // --- 4. GIRO (Dirección) ---
+        // --- GIRO ---
         if (moveInput > 0.1f)
             transform.localScale = new Vector3(Mathf.Abs(originalScale.x), originalScale.y, originalScale.z);
         else if (moveInput < -0.1f)
             transform.localScale = new Vector3(-Mathf.Abs(originalScale.x), originalScale.y, originalScale.z);
 
-        // --- 5. ACCIONES ---
+        // --- ACCIONES ---
         if (Input.GetKeyDown(jumpKey) && isGrounded)
+            // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
 
+        // --- ATAQUE Y BLOQUEO SIMULTÁNEOS ---
         if (Input.GetKeyDown(attackKey))
+        {
+            // Ahora se puede atacar siempre, incluso si se está bloqueando
             Attack();
+        }
 
-        // Bloqueo
         if (Input.GetKeyDown(blockKey) && anim != null) anim.SetBool("IsBlocking", true);
         if (Input.GetKeyUp(blockKey) && anim != null) anim.SetBool("IsBlocking", false);
     }
 
-    // --- FUNCIÓN DE ATAQUE CORREGIDA Y CON DEBUG ---
+    // --- FUNCIÓN DE ATAQUE CORREGIDA (Evita golpes dobles) ---
     void Attack()
     {
-        // 1. Activar animación
         if (anim != null) anim.SetTrigger("Attack");
-
-        // 2. Seguridad
         if (attackPoint == null) return;
 
-        // 3. Detectar colisiones en la capa Enemigo
         Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayers);
 
-        // DEBUG: Para saber si estamos tocando algo
-        if (hitEnemies.Length > 0)
-            Debug.Log("¡Golpeaste a " + hitEnemies.Length + " enemigos!");
-        else
-            Debug.Log("Golpe al aire (Ajusta el rango o acércate más)");
+        // Usamos un HashSet para guardar los objetos raíz únicos que ya hemos golpeado en este ataque
+        System.Collections.Generic.HashSet<GameObject> damagedObjects = new System.Collections.Generic.HashSet<GameObject>();
 
-        // 4. Aplicar daño
-        foreach (Collider2D enemy in hitEnemies)
+        foreach (Collider2D enemyCollider in hitEnemies)
         {
-            // Buscamos el script 'EnemyAI' en el objeto golpeado
-            EnemyAI enemyScript = enemy.GetComponent<EnemyAI>();
+            // Obtenemos el objeto raíz del enemigo (por si golpeamos un brazo o una pierna)
+            GameObject enemyRoot = enemyCollider.attachedRigidbody ? enemyCollider.attachedRigidbody.gameObject : enemyCollider.gameObject;
 
+            // Si ya hemos dañado a este objeto raíz en este mismo ataque, lo saltamos
+            if (damagedObjects.Contains(enemyRoot)) continue;
+
+            bool damageDealt = false;
+
+            // Intentamos dañar como enemigo normal
+            EnemyAI enemyScript = enemyRoot.GetComponent<EnemyAI>();
             if (enemyScript != null)
             {
                 enemyScript.TakeDamage(attackDamage);
+                damageDealt = true;
+            }
+            // Si no es normal, intentamos como JEFE FINAL
+            else
+            {
+                SimpleFinalBoss bossScript = enemyRoot.GetComponent<SimpleFinalBoss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(attackDamage);
+                    damageDealt = true;
+                }
+            }
+
+            // Si logramos hacer daño, marcamos el objeto raíz como dañado
+            if (damageDealt)
+            {
+                damagedObjects.Add(enemyRoot);
             }
         }
     }
 
-    public void TakeDamage(int damage = 10)
+    public void TakeDamage(int damage)
     {
         if (isDead) return;
 
         currentHealth -= damage;
-        if (anim != null) anim.SetTrigger("Hurt");
 
-        if (currentHealth <= 0)
+        if (anim != null)
         {
-            Die();
+            anim.SetTrigger("Hurt");
+            // Forzamos dejar de bloquear si nos pegan para evitar bugs
+            anim.SetBool("IsBlocking", false);
         }
+
+        Debug.Log(playerName + " recibe daño. Vida restante: " + currentHealth);
+
+        if (currentHealth <= 0) Die();
     }
 
-    // --- FUNCIÓN DE MUERTE OPTIMIZADA ---
     void Die()
     {
         Debug.Log(playerName + " ha muerto.");
         isDead = true;
+        currentHealth = 0;
         if (anim != null) anim.SetTrigger("Dead");
-
-        // 1. Quitar física
         rb.simulated = false;
-
-        // 2. APAGAR COLLIDER: Para que el enemigo deje de detectar este cadáver y busque al otro jugador
         Collider2D myCollider = GetComponent<Collider2D>();
         if (myCollider != null) myCollider.enabled = false;
-
-        // 3. Desactivar controles
         this.enabled = false;
-
-        // 4. Cambiar cámara (Llama al SplitScreenManager)
         Invoke("TriggerDeathCamera", 1.5f);
-
-        // 5. Destruir el cuerpo después de 3 segundos (Limpieza)
         Destroy(gameObject, 3f);
     }
 
     void TriggerDeathCamera()
     {
+        // Asegúrate de que esta clase exista en tu proyecto
         if (SplitScreenManager.instance != null)
         {
             SplitScreenManager.instance.PlayerDied(playerName);

@@ -12,12 +12,12 @@ public class EnemyAI : MonoBehaviour
     public float waitTime = 1f;
 
     [Header("Combate - Distancias")]
-    public float attackRange = 1.0f;     // Rango corto para que se acerque bien
+    public float attackRange = 1.0f;      // Rango corto para que se acerque bien
     public float detectionRange = 5f;    // Rango de visión
 
     [Header("Combate - Tiempos y Daño")]
     public float attackCooldown = 1.5f;
-    public float damageDelay = 0.4f;     // Ajusta esto para sincronizar el golpe con la animación
+    public float damageDelay = 0.4f;      // Ajusta esto para sincronizar el golpe con la animación
     public int damage = 10;
 
     [Header("Configuración Técnica")]
@@ -34,6 +34,9 @@ public class EnemyAI : MonoBehaviour
     private bool isDead = false;
     private bool isAttacking = false;
 
+    // --- NUEVA VARIABLE PARA ESQUELETOS QUIETOS ---
+    private bool esPasivo = false;
+
     // VARIABLE DINÁMICA (Cambia según quién esté vivo)
     private Transform currentTarget;
 
@@ -45,6 +48,15 @@ public class EnemyAI : MonoBehaviour
         currentHealth = maxHealth;
         anim = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
+
+        // --- VERIFICACIÓN DEL TAG PARA ESQUELETOS QUIETOS ---
+        // Si el objeto tiene el tag "EsqueletosQuietos", se marcará como pasivo.
+        if (gameObject.CompareTag("EsqueletosQuietos"))
+        {
+            esPasivo = true;
+            // Opcional: Reducir un poco la velocidad si son pasivos
+            patrolSpeed = patrolSpeed * 0.8f;
+        }
 
         // --- CORRECCIÓN DE FÍSICA ---
         // Esto evita que el enemigo se caiga o ruede
@@ -61,11 +73,20 @@ public class EnemyAI : MonoBehaviour
         // Si está atacando, frenamos todo movimiento para que no patine
         if (isAttacking)
         {
+            // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
             rb.linearVelocity = Vector2.zero;
             return;
         }
 
-        // --- CEREBRO: BUSCAR JUGADOR VIVO ---
+        // --- LÓGICA PARA ESQUELETOS PASIVOS ---
+        if (esPasivo)
+        {
+            // Si es pasivo, solo patrulla y no hace nada más (no persigue ni ataca)
+            Patrol();
+            return;
+        }
+
+        // --- CEREBRO IA NORMAL (Si NO es pasivo) ---
         currentTarget = FindClosestLivingPlayer();
 
         // 1. Si no encuentra a nadie vivo, Patrulla
@@ -120,17 +141,26 @@ public class EnemyAI : MonoBehaviour
 
     void Patrol()
     {
-        if (patrolPoints == null || patrolPoints.Length == 0) return;
+        if (patrolPoints == null || patrolPoints.Length == 0)
+        {
+            // Si no tiene puntos de patrulla, se queda quieto con animación de idle
+            // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
+            rb.linearVelocity = Vector2.zero;
+            anim.SetBool("IsRunning", false);
+            return;
+        }
 
         anim.SetBool("IsRunning", true);
         Transform target = patrolPoints[currentPointIndex];
 
         Vector2 direction = (target.position - transform.position).normalized;
+        // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
         rb.linearVelocity = new Vector2(direction.x * patrolSpeed, rb.linearVelocity.y);
         LookAt(target.position);
 
         if (Vector2.Distance(transform.position, target.position) < 0.5f)
         {
+            // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
             rb.linearVelocity = Vector2.zero;
             anim.SetBool("IsRunning", false);
             waitCounter -= Time.deltaTime;
@@ -148,12 +178,14 @@ public class EnemyAI : MonoBehaviour
 
         anim.SetBool("IsRunning", true);
         Vector2 direction = (currentTarget.position - transform.position).normalized;
+        // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
         rb.linearVelocity = new Vector2(direction.x * chaseSpeed, rb.linearVelocity.y);
         LookAt(currentTarget.position);
     }
 
     void AttackPlayer()
     {
+        // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
         rb.linearVelocity = Vector2.zero;
         anim.SetBool("IsRunning", false);
 
@@ -219,6 +251,7 @@ public class EnemyAI : MonoBehaviour
         CancelInvoke(); // Cancelar ataques pendientes
         anim.SetTrigger("Dead");
 
+        // NOTA: Si usas Unity antiguo, cambia 'linearVelocity' por 'velocity'
         rb.linearVelocity = Vector2.zero;
         rb.simulated = false; // Ya no tiene física
         GetComponent<Collider2D>().enabled = false; // Ya no se puede golpear ni tocar
@@ -244,6 +277,9 @@ public class EnemyAI : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
+        // Si es pasivo, no dibujamos los rangos de combate para evitar confusión
+        if (esPasivo) return;
+
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRange);
         Gizmos.color = Color.red;

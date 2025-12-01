@@ -18,17 +18,23 @@ EditorBuildSettings:
     path: Assets/Scenes/LevelMenu.unity
     guid: 98b6f595874c9184c8b1d04495e27fd9
   - enabled: 1
-    path: Assets/Scenes/Chapter1.unity
-    guid: 5d3739e4d1be4d44ba8e379d138bbaf8
-  - enabled: 1
     path: Assets/Scenes/GemVideoScene.unity
     guid: cdb0ebf2f1280e747af4cbc5f713acbe
+  - enabled: 1
+    path: Assets/Scenes/Chapter1.unity
+    guid: 5d3739e4d1be4d44ba8e379d138bbaf8
   - enabled: 1
     path: Assets/Scenes/Chapter2.unity
     guid: 5ad6ee189b6757346858a93a008da979
   - enabled: 1
     path: Assets/Scenes/Chapter3.unity
-    guid: 41c162d3793ba914fabd20748a8bc08d
+    guid: 9a9220c4831e51a419c641128d5e6f3d
+  - enabled: 1
+    path: Assets/Scenes/Chapter4.unity
+    guid: fe55ebffdf5096948ae120f5eb8d0cb4
+  - enabled: 1
+    path: Assets/Scenes/Chapter4 1.unity
+    guid: 2972720d584d8de46868704247937433
   - enabled: 1
     path: Assets/Scenes/CiudadMenu.unity
     guid: c9e47a980c5894d47b86784552446c3e
