@@ -2,13 +2,6 @@
 
 **Enlace al Documento del Proyecto:** [Ver Informe en Google Drive](https://drive.google.com/file/d/1fspa4Rx1iXBOr-fAMSki3ixtvRoovGX2/view?usp=sharing)
 
-## Integrantes y Roles del Proyecto
-
-* **Silva Abanto, Pier:** Responsable de la programación completa en Unity, búsqueda e implementación de assets, y el desarrollo general del trabajo del proyecto Ciudad Esmeralda en 2D.
-* **Ortiz Zegarra, Carlos Alberto:** Apoyo en temas de informe y redacción del proyecto.
-
----
-
 ## Sinopsis
 
 **Ciudad Esmeralda** es un videojuego en 2D ambientado en una ciudad distópica dominada por la opresión, la pobreza y la contaminación. La protagonista, **Harumi**, es una joven rebelde que ha perdido a su familia a causa del sistema corrupto y que emprende un viaje para liberar a su pueblo de las injusticias.
